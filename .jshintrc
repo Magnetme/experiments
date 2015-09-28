@@ -1,0 +1,14 @@
+{
+	"esnext" : true,
+	"curly" : true,
+	"eqeqeq" : true,
+	"freeze" : true,
+	"futurehostile" : true,
+	"latedef" : "nofunc",
+	"shadow" : "inner",
+	"undef" : true,
+	"unused" : true,
+	"loopfunc" : true,
+	"browser" : true,
+	"devel" : true
+}

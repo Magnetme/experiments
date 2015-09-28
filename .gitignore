@@ -1,0 +1,6 @@
+node_modules
+test-results
+out
+docs
+.yo-rc.json
+npm-debug.log
