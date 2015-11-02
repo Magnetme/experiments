@@ -25,3 +25,7 @@ app
 	</div>
 ```
 
+# Caveats
+
+## Some experiment providers (e.g. Google Analytics) require you to send an additional request after loading the experiment
+This module only loads the experiment in the browser, but does not automatically send anything to your experiments provider. For example, Google Analytics requires that at least one hit is send to Google Analytics after loading the experiments. This module does not do that for you since this we do not know how you interact with Google Analytics (this is application specific) and therefore we cannot determine an appropriate action to take to send the hit to GA.

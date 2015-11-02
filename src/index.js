@@ -32,10 +32,48 @@ export default angular.module("mm.experiments", [])
 		const resolvers = new Map();
 		const promises = new Map();
 
+		/**
+		 * Loads the experiments api and resolves to the cxApi object.
+		 */
+		async function getCxApi() {
+			await new Promise(resolve => {
+				if (window.cxApi) {
+					resolve();
+					return;
+				}
+				const script = document.createElement('script');
+				script.src = 'https://www.google-analytics.com/cx/api.js';
+				script.addEventListener('load', () => {
+					resolve();
+				});
+				document.body.appendChild(script);
+			});
+			return window.cxApi;
+		}
+
+		/**
+		 * Makes sure the variation is completely loaded in the current document.
+		 *
+		 * When the experiment is loaded in an iframe the cookies are not (always?) directly visible
+		 * from the main document. Therefore any call to analytics from the main document will NOT
+		 * include the variation. To make sure the variation is loaded we explicitely ask the cxApi
+		 * for the variation. As a side effect it will load the variation into the context of the
+		 * current document, and hence all following analytics calls will contain the experiment
+		 * parameters.
+		 */
+		async function loadVariationInDocument(id) {
+			const cxApi = await getCxApi();
+			//because addblockers
+			if (typeof cxApi !== 'undefined') {
+				cxApi.getChosenVariation(id);
+			}
+		}
+
 		window.mmGoogleExperimentCallback = (id, variation) => {
-			$rootScope.$apply(() => {
+			$rootScope.$apply(async () => {
 				//We cache the result as well as resolve the promise for the original call
 				experiments.set(id, variation);
+				await loadVariationInDocument(id);
 				if (resolvers.has(id)) {
 					resolvers.get(id)(variation);
 					resolvers.delete(id);
