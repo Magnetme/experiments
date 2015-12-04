@@ -46,6 +46,9 @@ export default angular.module("mm.experiments", [])
 				script.addEventListener('load', () => {
 					resolve();
 				});
+				script.addEventListener('error', () => {
+					resolve();
+				});
 				document.body.appendChild(script);
 			});
 			return window.cxApi;
