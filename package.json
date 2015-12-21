@@ -61,5 +61,13 @@
     "watch": "^0.16.0",
     "webpack": "^1.12.2"
   },
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Magnetme/experiments.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Magnetme/experiments/issues"
+  },
+  "homepage": "https://github.com/Magnetme/experiments#readme"
 }
