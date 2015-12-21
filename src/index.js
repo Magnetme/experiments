@@ -36,7 +36,7 @@ export default angular.module("mm.experiments", [])
 		 * Loads the experiments api and resolves to the cxApi object.
 		 */
 		async function getCxApi() {
-			await new Promise(resolve => {
+			await new Promise((resolve, reject) => {
 				if (window.cxApi) {
 					resolve();
 					return;
@@ -47,7 +47,7 @@ export default angular.module("mm.experiments", [])
 					resolve();
 				});
 				script.addEventListener('error', () => {
-					resolve();
+					reject(new Error("Could not load Google Analytics API, likely due to an ad blocker"));
 				});
 				document.body.appendChild(script);
 			});
@@ -65,10 +65,15 @@ export default angular.module("mm.experiments", [])
 		 * parameters.
 		 */
 		async function loadVariationInDocument(id) {
-			const cxApi = await getCxApi();
-			//because addblockers
-			if (typeof cxApi !== 'undefined') {
-				cxApi.getChosenVariation(id);
+			try {
+				const cxApi = await getCxApi();
+				//because addblockers
+				if (typeof cxApi !== 'undefined') {
+					cxApi.getChosenVariation(id);
+				}
+			} catch (e) {
+				//Could not load the api, likely due to an ad blocker.
+				//Not much we can do about it
 			}
 		}
 
