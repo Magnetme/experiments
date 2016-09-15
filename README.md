@@ -12,7 +12,7 @@ Usage with Google Experiments:
 app
 	.run((experiments, googleExperiments) => {
 		//Configure all the things
-		experiments.setDeferredVariation('my-experiment', googleExperiments.getVariation('googleExperimentId'));
+		experiments.setVariationFactory('my-experiment', () => googleExperiments.getVariation('googleExperimentId'));
 	})
 ```
 ```html

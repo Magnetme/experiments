@@ -1,5 +1,15 @@
 import angular from 'angular';
 
+function memoize(func) {
+	const cache = new Map();
+	return function(...args) {
+		if (!cache.has(args[0])) {
+			cache.set(args[0], func(...args));
+		}
+		return cache.get(args[0]);
+	}
+}
+
 export default angular.module("mm.experiments", [])
 	.factory('experiments', ($q) => {
 		'ngInject';
@@ -10,19 +20,26 @@ export default angular.module("mm.experiments", [])
 			 * Sets a variation for a certain experiment.
 			 */
 			setVariation(name, variation) {
-				variations.set(name, $q.resolve(variation));
+				variations.set(name, () => $q.resolve(variation));
 			},
 			/**
 			 * Registers a promise for a certain variation.
 			 */
 			setDeferredVariation(name, deferred) {
-				variations.set(name, deferred);
+				variations.set(name, () => deferred);
+			},
+			/**
+			 * Registers a factory for getting the variation of an experiment.
+			 * This is intended to be able to lazily initialize experiments.
+			 */
+			setVariationFactory(name, variationFactory) {
+				variations.set(name, memoize(variationFactory));
 			},
 			/**
 			 * Returns a promise that resolves to a variation
 			 */
 			getVariation(name) {
-				return variations.get(name);
+				return variations.get(name)();
 			}
 		};
 	})
