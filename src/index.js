@@ -43,7 +43,7 @@ export default angular.module("mm.experiments", [])
 			}
 		};
 	})
-	.factory('googleExperiments', ($q, $rootScope) => {
+	.factory('googleExperiments', ($q, $rootScope, $timeout) => {
 		'ngInject';
 		const experiments = new Map();
 		const resolvers = new Map();
@@ -95,7 +95,7 @@ export default angular.module("mm.experiments", [])
 		}
 
 		window.mmGoogleExperimentCallback = (id, variation) => {
-			$rootScope.$apply(async () => {
+			$timeout(async () => {
 				//We cache the result as well as resolve the promise for the original call
 				experiments.set(id, variation);
 				await loadVariationInDocument(id);
