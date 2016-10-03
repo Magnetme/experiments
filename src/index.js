@@ -95,6 +95,9 @@ export default angular.module("mm.experiments", [])
 		}
 
 		window.mmGoogleExperimentCallback = (id, variation) => {
+			//This callback is called from a (non-angular) iframe, and as such we're out of the digest loop under normal circumstances.
+			//However, in Safari there sometimes *is* a digest loop active (presumably there's a bug in its event loop / iframe isolation). 
+			//We therefore use a $timeout instead, which triggers a digest loop where needed but doesn't trigger errors if we're already in one.
 			$timeout(async () => {
 				//We cache the result as well as resolve the promise for the original call
 				experiments.set(id, variation);
