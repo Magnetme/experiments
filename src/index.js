@@ -1,4 +1,5 @@
 import angular from 'angular';
+import ngAsync from 'ng-async';
 
 function memoize(func) {
 	const cache = new Map();
@@ -10,7 +11,7 @@ function memoize(func) {
 	}
 }
 
-export default angular.module("mm.experiments", [])
+export default angular.module("mm.experiments", [ ngAsync.name ])
 	.factory('experiments', ($q) => {
 		'ngInject';
 
@@ -43,7 +44,7 @@ export default angular.module("mm.experiments", [])
 			}
 		};
 	})
-	.factory('googleExperiments', ($q, $rootScope, $timeout) => {
+	.factory('googleExperiments', ($q, $rootScope, $timeout, $async) => {
 		'ngInject';
 		const experiments = new Map();
 		const resolvers = new Map();
@@ -52,8 +53,8 @@ export default angular.module("mm.experiments", [])
 		/**
 		 * Loads the experiments api and resolves to the cxApi object.
 		 */
-		async function getCxApi() {
-			await new Promise((resolve, reject) => {
+		const getCxApi = $async(function*() {
+			yield new Promise((resolve, reject) => {
 				if (window.cxApi) {
 					resolve();
 					return;
@@ -69,7 +70,7 @@ export default angular.module("mm.experiments", [])
 				document.body.appendChild(script);
 			});
 			return window.cxApi;
-		}
+		});
 
 		/**
 		 * Makes sure the variation is completely loaded in the current document.
@@ -81,9 +82,9 @@ export default angular.module("mm.experiments", [])
 		 * current document, and hence all following analytics calls will contain the experiment
 		 * parameters.
 		 */
-		async function loadVariationInDocument(id) {
+		const loadVariationInDocument = $async(function*(id) {
 			try {
-				const cxApi = await getCxApi();
+				const cxApi = yield getCxApi();
 				//because addblockers
 				if (typeof cxApi !== 'undefined') {
 					cxApi.getChosenVariation(id);
@@ -92,25 +93,20 @@ export default angular.module("mm.experiments", [])
 				//Could not load the api, likely due to an ad blocker.
 				//Not much we can do about it
 			}
-		}
+		});
 
-		window.mmGoogleExperimentCallback = (id, variation) => {
-			//This callback is called from a (non-angular) iframe, and as such we're out of the digest loop under normal circumstances.
-			//However, in Safari there sometimes *is* a digest loop active (presumably there's a bug in its event loop / iframe isolation). 
-			//We therefore use a $timeout instead, which triggers a digest loop where needed but doesn't trigger errors if we're already in one.
-			$timeout(async () => {
-				//We cache the result as well as resolve the promise for the original call
-				experiments.set(id, variation);
-				await loadVariationInDocument(id);
-				if (resolvers.has(id)) {
-					resolvers.get(id)(variation);
-					resolvers.delete(id);
-				}
-			});
-		};
+		window.mmGoogleExperimentCallback = $async(function*(id, variation) {
+			//We cache the result as well as resolve the promise for the original call
+			experiments.set(id, variation);
+			yield loadVariationInDocument(id);
+			if (resolvers.has(id)) {
+				resolvers.get(id)(variation);
+				resolvers.delete(id);
+			}
+		});;
 
 		return {
-			getVariation: async function(id, defaultVariation = 0) {
+			getVariation: $async(function*(id, defaultVariation = 0) {
 				//Short circuit from cache if possible
 				if (experiments.has(id)) {
 					return experiments.get(id);
@@ -119,7 +115,7 @@ export default angular.module("mm.experiments", [])
 				//This is to prevent multiple iframes from being inserted when the first one hasn't finished
 				//loading yet
 				if (promises.has(id)) {
-					return await promises.get(id);
+					return yield promises.get(id);
 				}
 
 				//If we don't have the id yet we create a new invisible iframe that can get the variation for a given
@@ -155,11 +151,11 @@ export default angular.module("mm.experiments", [])
 					variationDocument.close();
 				});
 				promises.set(id, promise);
-				return await promise;
-			}
+				return yield promise;
+			})
 		};
 	})
-	.directive('mmExperiment', (experiments) => {
+	.directive('mmExperiment', (experiments, $async) => {
 		'ngInject';
 		return {
 			restrict : 'A',
@@ -185,27 +181,28 @@ export default angular.module("mm.experiments", [])
 				/**
 				 * Returns a promise that resolves to the variation chosen
 				 */
-				this.getVariation = async function() {
-					const experiment = await this.experiment;
-					return await experiments.getVariation(experiment);
-				};
+				this.getVariation = $async(function*() {
+					const experiment = yield this.experiment;
+					return yield experiments.getVariation(experiment);
+				});
 			},
-			link : async function(scope, el, attrs, ctrl) {
+			link : $async(function*(scope, el, attrs, ctrl) {
 				ctrl._setExperiment(attrs.mmExperiment);
-				scope.$variation = await experiments.getVariation(attrs.mmExperiment);
-			}
+				scope.$variation = yield experiments.getVariation(attrs.mmExperiment);
+			})
 		}
 	})
-	.directive('mmVariation', () => {
+	.directive('mmVariation', ($async) => {
+		'ngInject';
 		return {
 			restrict : 'A',
 			require : '^mmExperiment',
 			transclude : 'element',
 			priority: 599, //1 less than ng-if
 			terminal : true,
-			link: async function(scope, el, attrs, experimentCtrl, $transclude) {
+			link: $async(function*(scope, el, attrs, experimentCtrl, $transclude) {
 				let myVariation = attrs.mmVariation;
-				const chosen = await experimentCtrl.getVariation();
+				const chosen = yield experimentCtrl.getVariation();
 				//If the chosen variation is a number then we convert the given variation to a number too.
 				//We always get it as a string, so we need to do this extra step.
 				if (Number.isFinite(chosen)) {
@@ -217,7 +214,7 @@ export default angular.module("mm.experiments", [])
 						el.replaceWith(clone);
 					});
 				}
-			}
+			})
 		}
 	});
 
