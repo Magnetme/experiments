@@ -40,6 +40,10 @@ export default angular.module("mm.experiments", [ ngAsync.name ])
 			 * Returns a promise that resolves to a variation
 			 */
 			getVariation(name) {
+				if (!variations.has(name)) {
+					console.warn(`Experiment ${name} is not loaded`);
+					return $q.reject(`Experiment ${name} is not loaded`);
+				}
 				return variations.get(name)();
 			}
 		};
@@ -182,13 +186,22 @@ export default angular.module("mm.experiments", [ ngAsync.name ])
 				 * Returns a promise that resolves to the variation chosen
 				 */
 				this.getVariation = $async(function*() {
-					const experiment = yield this.experiment;
-					return yield experiments.getVariation(experiment);
+					try {
+						const experiment = yield this.experiment;
+						return yield experiments.getVariation(experiment);
+					} catch (e) {
+						return 0;
+					}
 				});
 			},
 			link : $async(function*(scope, el, attrs, ctrl) {
 				ctrl._setExperiment(attrs.mmExperiment);
-				scope.$variation = yield experiments.getVariation(attrs.mmExperiment);
+				try {
+					scope.$variation = yield experiments.getVariation(attrs.mmExperiment);
+				} catch (e) {
+					scope.$variation = 0;
+					throw e;
+				}
 			})
 		}
 	})
