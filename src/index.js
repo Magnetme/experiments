@@ -142,6 +142,12 @@ export default angular.module("mm.experiments", [ ngAsync.name ])
 								} else {
 									variation = ${defaultVariation};
 								}
+								// Some ad-blockers don't nuke the cxApi, but instead replace it with a
+								// mock implementation. We also need to deal with that.
+								// E.g. ghostery has this behaviour.
+								if (typeof variation === 'undefined') {
+									variation = ${defaultVariation};
+								}
 								window.parent.mmGoogleExperimentCallback("${id}", variation);
 							</script>
 						</body>
